@@ -1,7 +1,5 @@
 # Kimai-Assignment
 
-# Kimai Assignment
-
 ## Overview
 Below are theree possible ways to deploy Kimai application in Docker container:
 1. **Docker Compose** - Best for local or small deployments.
