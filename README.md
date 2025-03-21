@@ -83,8 +83,8 @@ The diagram represents a highly available and scalable architecture for deployin
 - **Amazon EFS**: Provides shared storage across multiple pods and ensures persistent storage.
 - **Application Load Balancer (ALB)**: Distributes incoming traffic to the Kimai service running in EKS.
 - **Service (SVC)**: Manages internal communication between application pods and backend services.
-- **Replication**: Ensures high availability by syncing data between the RDS master and read replica.
+- **Replication**: This is to make sure that we have HA setup in case if anything goes wrong with Master database, we can promote reader instance as master.
 
-This architecture is designed for **high availability, auto-scaling, and security**, making it the best choice for enterprise-scale Kimai deployments.
+This architecture is suitable for **high availability, auto-scaling, and security**, making it production ready for application like Kimai.
 
 
