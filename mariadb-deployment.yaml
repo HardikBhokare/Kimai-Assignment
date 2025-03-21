@@ -14,33 +14,33 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: mariadb
+  name: mysql
   namespace: kimai
 spec:
   ports:
     - port: 3306
   selector:
-    app: mariadb
+    app: mysql
 
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: mariadb
+  name: mysql
   namespace: kimai
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: mariadb
+      app: mysql
   template:
     metadata:
       labels:
-        app: mariadb
+        app: mysql
     spec:
       containers:
-        - name: mariadb
-          image: mariadb:10.5
+        - name: mysql
+          image: mariadb:latest
           env:
             - name: MYSQL_ROOT_PASSWORD
               value: "rootpassword"
@@ -53,9 +53,9 @@ spec:
           ports:
             - containerPort: 3306
           volumeMounts:
-            - name: mariadb-storage
+            - name: mysql-storage
               mountPath: /var/lib/mysql
       volumes:
-        - name: mariadb-storage
+        - name: mysql-storage
           persistentVolumeClaim:
-            claimName: mariadb-pvc
+            claimName: mysql-pvc
