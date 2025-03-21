@@ -1,0 +1,60 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: kimai-pvc
+  namespace: kimai
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kimai
+  namespace: kimai
+spec:
+  selector:
+    app: kimai
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8001
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kimai
+  namespace: kimai
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kimai
+  template:
+    metadata:
+      labels:
+        app: kimai
+    spec:
+      containers:
+        - name: kimai
+          image: kimai/kimai2:apache
+          env:
+            - name: APP_ENV
+              value: "prod"
+            - name: DATABASE_URL
+              value: "mysql://kimai:kimaipassword@mariadb:3306/kimai"
+          ports:
+            - containerPort: 8001
+          volumeMounts:
+            - name: kimai-storage
+              mountPath: /opt/kimai/var
+      volumes:
+        - name: kimai-storage
+          persistentVolumeClaim:
+            claimName: kimai-pvc
