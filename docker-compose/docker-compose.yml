@@ -35,6 +35,9 @@ services:
 
   kimai:
     image: kimai/kimai2:apache
+    volumes:
+      - data:/opt/kimai/var/data
+      - plugins:/opt/kimai/var/plugins
     container_name: kimai
     restart: unless-stopped
     depends_on:
@@ -111,6 +114,8 @@ services:
         condition: on-failure
 
 volumes:
+  data:
+  plugins:
   db_data:
 
 networks:
