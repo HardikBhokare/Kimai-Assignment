@@ -6,6 +6,8 @@ Below are theree possible ways to deploy Kimai application in Docker container:
 2. **AWS ECS (Fargate or EC2)** - Best for managed container deployment.
 3. **Kubernetes (EKS, GKE, AKS, or self-hosted)** - Best for scaling and high availability.
 
+**For this assignment, we have decide go with Kubernetes.**
+
 ---
 
 ## Option 1: Docker Compose (Best for local or small deployments)
