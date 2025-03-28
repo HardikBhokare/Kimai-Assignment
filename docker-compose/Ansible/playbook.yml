@@ -1,0 +1,89 @@
+- name: Deploy Kimai with Docker Compose
+  hosts: servers
+  become: true
+  vars:
+    docker_user: "{{ ansible_user }}" 
+    compose_file: "docker-compose.yml"
+    project_dir: "/home/{{ ansible_user }}/kimai"
+
+  tasks:
+    - name: Install required dependencies
+      ansible.builtin.apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - software-properties-common
+        state: present
+        update_cache: yes
+
+    - name: Add Docker GPG key
+      ansible.builtin.apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Add Docker repository
+      ansible.builtin.apt_repository:
+        repo: "deb https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        state: present
+
+    - name: Install Docker and Docker Compose
+      ansible.builtin.apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-compose-plugin
+        state: present
+        update_cache: yes
+
+    - name: Ensure Docker service is running
+      ansible.builtin.systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Ensure user is in the docker group
+      ansible.builtin.user:
+        name: "{{ ansible_user }}"
+        groups: docker
+        append: yes
+
+    - name: Create project directory
+      ansible.builtin.file:
+        path: "{{ project_dir }}"
+        state: directory
+        owner: "{{ docker_user }}"
+        group: "{{ docker_user }}"
+        mode: '0755'
+
+    - name: Copy and decrypt .env file
+      ansible.builtin.template:
+        src: .env.j2
+        dest: "{{ project_dir }}/.env"
+        owner: "{{ docker_user }}"
+        group: "{{ docker_user }}"
+        mode: '0600'
+
+    - name: Copy Docker Compose file
+      ansible.builtin.copy:
+        src: ../docker-compose.yml
+        dest: "{{ project_dir }}/{{ compose_file }}"
+        owner: "{{ docker_user }}"
+        group: "{{ docker_user }}"
+        mode: '0644'
+        force: yes
+
+    - name: Deploy Kimai with Docker Compose
+      community.docker.docker_compose:
+        project_src: "{{ project_dir }}"
+        state: present
+
+    - name: Verify running containers
+      ansible.builtin.command: "docker ps"
+      register: docker_status
+      changed_when: false
+
+    - name: Display running containers
+      ansible.builtin.debug:
+        msg: "{{ docker_status.stdout_lines }}"
