@@ -89,7 +89,7 @@ The diagram represents a highly available and scalable architecture for deployin
 - **Application Load Balancer (ALB)**: Distributes incoming traffic to the Kimai service running in EKS.
 - **Service (SVC)**: Service will going to forard traffic from Ingress resource to Kimai application.
 - **Secret**: We are using secret resource to pass the DB connection string and password onto the application deployment file.
-- **Replication**: This is to make sure that we have HA setup in case if anything goes wrong with Master database, we can promote reader instance as master.
+- **Database Replication**: This is to make sure that we have HA setup in case if anything goes wrong with Master database, we can promote reader instance as master.
 - **HPA**: Horizontal POD autoscaler is used to scale the POD based on the resources. In order to make HPA work we need to install metrics server on the cluster.
 - **Cluster Autoscaler**: We can also use cluster autoscaler in ordere to scale up and scale down the nodes if required.
 - **Ingress Resources**: We also need to use ingress resource which will be responsible to forward trafiic to particular service based on path.
