@@ -1,0 +1,72 @@
+{
+  "family": "kimai-task",
+  "executionRoleArn": "arn:aws:iam::123456789:role/ecsTaskExecutionRole",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "256",
+  "memory": "512",
+  "containerDefinitions": [
+    {
+      "name": "kimai",
+      "image": "ghcr.io/kimai/kimai2:latest",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 8001,
+          "protocol": "tcp"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "DATABASE_URL",
+          "valueFrom": "arn:aws:secretsmanager:region:123456789:secret:kimai-db-credentials:DATABASE_URL"
+        },
+        {
+          "name": "TRUSTED_HOSTS",
+          "valueFrom": "arn:aws:secretsmanager:region:123456789:secret:kimai-app-secrets:TRUSTED_HOSTS"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/kimai",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "healthCheck": {
+        "command": [
+          "CMD-SHELL",
+          "curl -f http://localhost:8001/ || exit 1"
+        ],
+        "interval": 30,
+        "timeout": 5,
+        "startPeriod": 60,
+        "retries": 3
+      },
+      "environment": [
+        {
+          "name": "APP_ENV",
+          "value": "production"
+        }
+      ],
+      "linuxParameters": {
+        "capabilities": {
+          "drop": [
+            "ALL"
+          ]
+        }
+      },
+      "resourceRequirements": {
+        "limits": {
+          "memory": 1024,
+          "cpu": 512
+        },
+        "requests": {
+          "memory": 512,
+          "cpu": 256
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+#We can use following command to register service as scalable target
+
+aws application-autoscaling register-scalable-target \
+    --service-namespace ecs \
+    --resource-id service/kimai-cluster/kimai-service \
+    --scalable-dimension ecs:service:DesiredCount \
+    --min-capacity 2 \
+    --max-capacity 5 \
+    --role-arn arn:aws:iam::123456789:role/aws-service-role/ecs.amazonaws.com/AWSServiceRoleForECS
+
+#Once the ECS service is registered as a scalable target, create the auto-scaling policy using following command:
+aws application-autoscaling put-scaling-policy \
+    --policy-name kimai-cpu-scaling-policy \
+    --service-namespace ecs \
+    --resource-id service/kimai-cluster/kimai-service \
+    --scalable-dimension ecs:service:DesiredCount \
+    --policy-type TargetTrackingScaling \
+    --target-tracking-scaling-policy-configuration '{
+        "TargetValue": 50.0,
+        "PredefinedMetricSpecification": {
+            "PredefinedMetricType": "ECSServiceAverageCPUUtilization"
+        },
+        "ScaleInCooldown": 60,
+        "ScaleOutCooldown": 60
+    }'
