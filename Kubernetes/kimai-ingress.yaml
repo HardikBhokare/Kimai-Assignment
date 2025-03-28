@@ -1,0 +1,37 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kimai-ingress
+  namespace: kimai
+  finalizers:
+    - group.ingress.k8s.aws/external-traffic
+  annotations:
+    alb.ingress.kubernetes.io/backend-protocol: HTTP
+    alb.ingress.kubernetes.io/group.name: kimai-traffic
+    alb.ingress.kubernetes.io/healthcheck-interval-seconds: '30'
+    alb.ingress.kubernetes.io/healthcheck-timeout-seconds: '15'
+    alb.ingress.kubernetes.io/healthy-threshold-count: '2'
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: '443'
+    alb.ingress.kubernetes.io/load-balancer-attributes: access_logs.s3.enabled=true,access_logs.s3.bucket=kimai-alb-logs,access_logs.s3.prefix=kimai-application,idle_timeout.timeout_seconds=900
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/security-groups: sg-123456789
+    alb.ingress.kubernetes.io/subnets: subnet-123456789,subnet-64849848949465,subnet-6549749879849465
+    alb.ingress.kubernetes.io/success-codes: 200-499
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/unhealthy-threshold-count: '5'
+    alb.ingress.kubernetes.io/target-group-attributes: stickiness.enabled=true,stickiness.type=lb_cookie,stickiness.lb_cookie.duration_seconds=3600
+    alb.ingress.kubernetes.io/certificate-arn: 'arn:aws:acm:us-east-1:12345678912345:certificate/egfu7897986-c179-434c-b49f-ckhecvu74151'
+  labels: {}
+spec:
+  ingressClassName: alb
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: kimai-service
+                port:
+                  number: 80

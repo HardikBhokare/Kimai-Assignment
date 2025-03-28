@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kimai
+  namespace: kimai
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: kimai
+      tags.datadoghq.com/env: prod
+      tags.datadoghq.com/service: kimai
+      admission.datadoghq.com/enabled: "true"
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+  template:
+    metadata:
+      annotations: 
+        admission.datadoghq.com/dotnet-lib.version: v2.43.0
+      labels:
+        app: kimai
+        tags.datadoghq.com/env: prod
+        tags.datadoghq.com/service: kimai
+        admission.datadoghq.com/enabled: "true"        
+    spec:
+      serviceAccountName: github-actions-deployer
+      containers:
+        - name: kimai
+          image: kimai/kimai2:apache
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "200Mi"
+            limits:
+              cpu: "700m"
+              limits: "1Gi"
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: kimai-db-secrets
+                  key: database_url
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: kimai-db-secrets
+                  key: database_password
+            - name: DD_LOGS_INJECTION
+              value: "true"
+            - name: DATADOG_TRACE_AGENT_HOSTNAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: status.hostIP
+            - name: DD_ENV
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['tags.datadoghq.com/env']
+          livenessProbe:
+            httpGet:
+              path: /status
+              port: 8001
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8001
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          ports:
+            - containerPort: 8001
+          volumeMounts:
+            - name: kimai-storage
+              mountPath: /opt/kimai/var
+      volumes:
+        - name: kimai-storage
+          persistentVolumeClaim:
+            claimName: kimai-pvc

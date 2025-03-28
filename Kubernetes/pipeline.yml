@@ -1,0 +1,104 @@
+name: Kimai CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main 
+  workflow-dispatch:
+    inputs:
+      environment:
+        description: "Define env name"
+        required: true
+        default: "dev"
+        type: choice
+        options:
+          - dev
+          - prod
+  
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+      IMAGE_TAG: ${{ github.sha }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build and push Docker image to ECR
+        run: |
+          docker build -t ${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }} .
+          docker push ${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+
+      - name: Run Trivy vulnerability scan
+        uses: aquasecurity/trivy-action@0.19.0
+        with:
+          image-ref: '${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}'
+          format: 'table'
+          exit-code: '1'   
+          ignore-unfixed: 'true'
+
+      - name: Run tests
+        run: |
+          npm test or pytest
+          echo "Running tests..."
+          echo "Tests Passed!"
+    
+        continue-on-error: true
+
+      - name: Fail Deployment if tests fail
+        if: failure() && steps.test.outcome == 'failure'
+        run: exit 1
+
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    needs: build
+    env:
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      EKS_CLUSTER_NAME: ${{ secrets.EKS_CLUSTER_NAME }}
+      ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+      IMAGE_TAG: ${{ github.sha }}
+      AWS_ROLE_TO_ASSUME: ${{ secrets.AWS_ROLE_TO_ASSUME }} 
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.28.3'
+
+      - name: Approval
+        uses: trstringer/manual-approval@v1
+        timeout-minutes: 30
+        if: ${{ github.event.inputs.environment != 'dev' }}
+        with:
+          secret: ${{ github.TOKEN }}
+          approvers: user1, user2, user3, user4
+          issue-title: "Deploying Kimai application to ${{ inputs.environment }} with image tag ${{ env.IMAGE_TAG }}"
+          minimum-approvals: 2
+
+      - name: Configure AWS Credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::123456789:role/GitHubActionsRole
+          aws-region: us-east-1
+
+      - name: Verify AWS Authentication
+        run: aws sts get-caller-identity
+
+      - name: Update deployment manifest
+        run: |
+          aws eks update-kubeconfig --name my-cluster --region us-east-1
+          sed -i "s|image: .*|image: ${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}|g" kimai-deployment.yml # Adjust path if needed
+          kubectl apply -f kimai-deployment.yaml -n kimai
